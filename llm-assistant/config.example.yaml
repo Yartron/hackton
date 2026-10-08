@@ -1,0 +1,43 @@
+# Конфигурация LLM-ассистента (пункт 9 платформы наблюдаемости).
+# Путь до файла задаётся переменной LLM_ASSISTANT_CONFIG, по умолчанию ./config.yaml.
+# Секреты (API-ключ) лучше не хранить здесь, а передавать через env: LLM_API_KEY.
+
+llm:
+  # openai (OpenAI-совместимый API: OpenAI/YandexGPT/внутренний GW) | anthropic | ollama | mock
+  provider: mock
+  model: gpt-4o-mini
+  base_url: https://api.openai.com/v1
+  temperature: 0.1
+  max_tokens: 1200
+  timeout_s: 45
+  # Просим модель отвечать строгим JSON (для ollama используется format=json).
+  json_mode: true
+  # Ограничение на объём логов, уходящих в промт (защита от раздувания контекста).
+  max_log_chars: 24000
+
+sources:
+  enabled: true
+  prometheus_url: http://prometheus.monitoring:9090
+  loki_url: http://loki.monitoring:3100
+  lookback: 30m
+  step: 2m
+  loki_query: '{namespace="demo"} |~ "(?i)(error|exception|traceback|timeout|oom|panic)"'
+  loki_limit: 300
+  # Текстовые вставки, которые подставляются в промт (SLO/SLI и топология).
+  slo_text: "demo-app: доступность >= 99.5% за 30 дней; latency p95 <= 300 мс; error rate <= 1%."
+  topology_text: "demo-app (ns demo): Deployment, 2 реплики; Service/Ingress; зависимости: postgres, redis."
+  queries:
+    error_rate: 'sum(rate(http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(http_requests_total[5m])), 1e-9)'
+    latency_p95: 'histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))'
+    availability: 'sum(rate(http_requests_total{status!~"5.."}[5m])) / clamp_min(sum(rate(http_requests_total[5m])), 1e-9)'
+    firing_alerts: 'sum by (alertname, severity) (ALERTS == 1)'
+
+notify:
+  enabled: false
+  # Slack/MS-generic webhook: уйдёт сообщение {"text": "..."}.
+  webhook_url: ""
+
+audit:
+  path: ./data/audit.jsonl
+
+prompts_dir: ./prompts

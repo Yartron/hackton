@@ -1,0 +1,139 @@
+# LLM-ассистент (пункт 9): развёртывание в кластере.
+# Namespace предполагается существующим: kubectl create namespace observability
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llm-assistant-config
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: llm-assistant
+data:
+  config.yaml: |
+    llm:
+      # переопределяется через env LLM_PROVIDER / LLM_MODEL / LLM_API_KEY
+      provider: openai
+      model: gpt-4o-mini
+      base_url: https://api.openai.com/v1
+      temperature: 0.1
+      max_tokens: 1200
+      json_mode: true
+      max_log_chars: 24000
+    sources:
+      enabled: true
+      prometheus_url: http://prometheus.monitoring:9090
+      loki_url: http://loki.monitoring:3100
+      lookback: 30m
+      loki_query: '{namespace="demo"} |~ "(?i)(error|exception|traceback|timeout|oom|panic)"'
+      slo_text: "demo-app: доступность >= 99.5% за 30 дней; latency p95 <= 300 мс; error rate <= 1%."
+      topology_text: "demo-app (ns demo): Deployment, 2 реплики; Service/Ingress; зависимости: postgres, redis."
+    notify:
+      enabled: true
+      webhook_url: ""
+    audit:
+      path: /app/data/audit.jsonl
+    prompts_dir: /app/prompts
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: llm-assistant-secrets
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: llm-assistant
+type: Opaque
+stringData:
+  # ЗАМЕНИТЬ: ключ LLM-шлюза (в demo допускается placeholder)
+  LLM_API_KEY: "REPLACE_ME"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-assistant
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: llm-assistant
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: llm-assistant
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: llm-assistant
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: llm-assistant
+          image: registry.example/observability/llm-assistant:0.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: LLM_ASSISTANT_CONFIG
+              value: /app/config/config.yaml
+            - name: LLM_PROVIDER
+              value: openai
+            - name: LLM_MODEL
+              value: gpt-4o-mini
+            - name: LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: llm-assistant-secrets
+                  key: LLM_API_KEY
+            - name: PROMETHEUS_URL
+              value: http://prometheus.monitoring:9090
+            - name: LOKI_URL
+              value: http://loki.monitoring:3100
+            - name: NOTIFY_WEBHOOK_URL
+              value: ""   # Slack/MS webhook для публикации разбора
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+            - name: data
+              mountPath: /app/data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+      volumes:
+        - name: config
+          configMap:
+            name: llm-assistant-config
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-assistant
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: llm-assistant
+spec:
+  selector:
+    app.kubernetes.io/name: llm-assistant
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

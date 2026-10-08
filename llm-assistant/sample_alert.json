@@ -1,0 +1,53 @@
+{
+  "version": 4,
+  "groupKey": "{alertname=\"HighErrorRate\", service=\"demo-app\"}",
+  "status": "firing",
+  "receiver": "llm-assistant",
+  "externalURL": "https://alertmanager.example/#/alerts",
+  "commonLabels": {
+    "alertname": "HighErrorRate",
+    "service": "demo-app",
+    "severity": "critical"
+  },
+  "commonAnnotations": {
+    "summary": "Доля ошибок 5xx 7.4% выше порога 1% (SLO demo-app)",
+    "runbook_url": "https://wiki.example/sre/runbooks/high-error-rate"
+  },
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {
+        "alertname": "HighErrorRate",
+        "severity": "critical",
+        "service": "demo-app",
+        "namespace": "demo",
+        "pod": "demo-app-7d9f4c-x2x8l"
+      },
+      "annotations": {
+        "summary": "Доля ошибок 5xx 7.4% выше порога 1% (SLO demo-app)",
+        "description": "error_rate breach for 10m",
+        "runbook_url": "https://wiki.example/sre/runbooks/high-error-rate"
+      },
+      "startsAt": "2026-10-07T10:12:00Z",
+      "generatorURL": "https://prometheus.example/graph",
+      "fingerprint": "deadbeef"
+    },
+    {
+      "status": "firing",
+      "labels": {
+        "alertname": "PodNotReady",
+        "severity": "warning",
+        "service": "demo-app",
+        "namespace": "demo",
+        "pod": "demo-app-7d9f4c-x2x8l"
+      },
+      "annotations": {
+        "summary": "Под demo-app-7d9f4c-x2x8l не готов 5m",
+        "description": "readiness probe failed"
+      },
+      "startsAt": "2026-10-07T10:13:00Z",
+      "generatorURL": "https://prometheus.example/graph",
+      "fingerprint": "feedface"
+    }
+  ]
+}

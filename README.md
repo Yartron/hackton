@@ -46,13 +46,16 @@ k8s-манифесты и конфиг вебхука Alertmanager.
 
 ## Быстрый старт (пункт 9)
 
+Зависимости управляются через [uv](https://docs.astral.sh/uv/): они описаны в `pyproject.toml`,
+зафиксированные версии — в `uv.lock`. Нужен Python 3.12 (подтянется сам через `uv python pin`).
+
 ```bash
 cd llm-assistant
-pip install -r requirements.txt
-uvicorn app.main:app --port 8080
+uv sync                                     # venv + зависимости из uv.lock
+uv run uvicorn app.main:app --port 8080
 
 curl -s -X POST localhost:8080/demo/incident | jq
-pytest
+uv run pytest
 ```
 
 Офлайн-режим использует провайдер `mock` (ключ не нужен). Подключение реального LLM:

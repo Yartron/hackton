@@ -9,14 +9,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Установка uv
+        uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.12"
-          cache: pip
+          version: "0.11.21"
+          enable-cache: true
+          cache-dependency-glob: "llm-assistant/uv.lock"
+      # working-directory указываем явно на каждом шаге: контекст docker build
+      # и cache-dependency-glob считаются от корня репозитория.
+      - name: Проверка актуальности lock-файла
+        working-directory: llm-assistant
+        run: uv lock --check
       - name: Установка зависимостей
-        run: pip install -r llm-assistant/requirements.txt
+        working-directory: llm-assistant
+        run: uv sync --frozen --all-groups
       - name: Pytest
         working-directory: llm-assistant
-        run: python -m pytest -v
+        run: uv run --frozen python -m pytest -v
       - name: Сборка образа
         run: docker build -t llm-assistant:ci llm-assistant

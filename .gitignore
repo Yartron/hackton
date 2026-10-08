@@ -1,10 +1,60 @@
 __pycache__/
-*.py[cod]
+*.py[codz]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+coverage.xml
+*.cover
+.hypothesis/
 .pytest_cache/
-.venv/
-venv/
+
+# Environments
 .env
-data/
-*.jsonl
+.envrc
+.venv
+env/
+venv/
+
+# Type checkers / linters
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.ruff_cache/
+
+# Editors / IDE
+# hackton: JetBrains-проект (.idea/) и .vscode не коммитим
+.idea/
+.vscode/
+.spyderproject
+.spyproject
+*.swp
 .DS_Store
+
+# Jupyter
+.ipynb_checkpoints
+
+# uv
+# uv.lock намеренно НЕ игнорируется — фиксируем версии для воспроизводимых сборок.
+.uv/
+
+# hackton: специфичное для репозитория
+# audit-лог сервиса и локальные данные
+*.jsonl
+data/
+# рабочий конфиг: в репозитории только config.example.yaml
+llm-assistant/config.yaml
+# артефакты
 llmnost.zip

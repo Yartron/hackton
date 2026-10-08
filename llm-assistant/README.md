@@ -8,15 +8,42 @@
 * Исходники промтов: [`prompts/`](prompts/)
 * Манифесты: [`deploy/`](deploy/)
 
+## Зависимости (uv)
+
+Менеджер зависимостей — [uv](https://docs.astral.sh/uv/). Источник правды —
+`pyproject.toml`, зафиксированные версии — `uv.lock` (коммитится в репозиторий,
+проверяется в CI через `uv lock --check`). Нужна версия Python 3.12: она закреплена
+в `.python-version`, и uv скачает интерпретатор сам, если системного нет.
+
+```bash
+cd llm-assistant
+
+uv python pin 3.12          # закрепить интерпретатор (один раз)
+uv sync                     # создать .venv и поставить зависимости из uv.lock
+uv sync --frozen            # строго по lock-файлу (как в CI и Docker)
+uv run --frozen pytest      # тесты с гарантированно теми же версиями
+
+# добавить / обновить / удалить пакет
+uv add httpx
+uv add --dev ruff
+uv remove httpx
+
+# обновить lock-файл после правки pyproject.toml
+uv lock
+```
+
+Прод-зависимости лежат в `[project.dependencies]`, инструменты для разработки
+(pytest) — в группе `dev` (`[dependency-groups]`). Docker-образ ставит только прод-группу
+(`uv sync --frozen --no-dev`), поэтому pytest в образ не попадает.
+
 ## Быстрый старт
 
 ```bash
 cd llm-assistant
-python -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt
+uv sync
 
 # офлайн-режим (провайдер mock, ключ не нужен)
-uvicorn app.main:app --host 0.0.0.0 --port 8080
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8080
 ```
 
 ```bash
@@ -35,7 +62,7 @@ export LLM_PROVIDER=openai           # openai | anthropic | ollama | mock
 export LLM_MODEL=gpt-4o-mini
 export LLM_API_KEY=sk-...
 export LLM_BASE_URL=https://api.openai.com/v1
-uvicorn app.main:app --port 8080
+uv run uvicorn app.main:app --port 8080
 ```
 
 Для локального приватного запуска: `LLM_PROVIDER=ollama LLM_MODEL=llama3.1`.
@@ -108,7 +135,7 @@ MTTR до/после`.
 
 ```bash
 cd llm-assistant
-pytest
+uv run pytest
 ```
 
 Покрытие: рендер всех промтов без «сырых» плейсхолдеров, валидность JSON от mock,
@@ -122,7 +149,8 @@ kubectl apply -f deploy/k8s.yaml               # Deployment/Service/ConfigMap/Se
 kubectl apply -f deploy/alertmanager-webhook.yaml  # вебхук Alertmanager (фрагмент route)
 ```
 
-Образ: `Dockerfile` (python:3.12-slim, non-root, healthcheck).
+Образ: `Dockerfile` (python:3.12-slim, uv из `ghcr.io/astral-sh/uv`, non-root, healthcheck).
+Зависимости ставятся из `uv.lock` без dev-группы, поэтому образ воспроизводим.
 
 ## Структура
 
@@ -143,5 +171,8 @@ llm-assistant/
 ├── tests/            # pytest
 ├── deploy/           # k8s + alertmanager
 ├── config.example.yaml
+├── pyproject.toml    # зависимости и настройки pytest (uv)
+├── uv.lock           # зафиксированные версии зависимостей
+├── .python-version   # Python 3.12
 └── Dockerfile
 ```

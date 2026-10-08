@@ -185,7 +185,8 @@ output_schema: |          # желаемый JSON — добавляется в 
 
 1. Правишь YAML в `llm-assistant/prompts/`, поднимаешь `version`.
 2. Обновляешь `tests/test_prompts.py` (рендер без «сырых» `{{`).
-3. Прогоняешь `pytest` и смоук: `curl -X POST localhost:8080/demo/incident`.
+3. Прогоняешь `uv run pytest` (из `llm-assistant/`) и смоук:
+   `curl -X POST localhost:8080/demo/incident`.
 4. В PR — схема вывода и минимум один пример «ожидаемого vs полученного» ответа.
 5. Для реального провайдера — на golden-наборе (10–20 инцидентов) проверяешь:
    долю валидного JSON (цель ≥ 99%), отсутствие выдуманных метрик, наличие
